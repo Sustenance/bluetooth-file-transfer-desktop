@@ -1,4 +1,5 @@
 require('require-rebuild')();
+const cp = require('child_process');
 const _ = require('lodash');
 const btSerial = new (require('bluetooth-serial-port')).BluetoothSerialPort();
 
@@ -74,21 +75,27 @@ function refreshRenderer() {
   mainWindow.webContents.send("action", "refresh");
 }
 
-function searchForDevices() {
-  btSerial.on('found', function(address, name) {
-      console.log(`Found ${name} at ${address}`);
-      let device = {
-        "name": name,
-        "address": address
-      };
-      if (!_.find(global.sharedObject.foundDevices, function(d) {return d.address === device.address})){
+function addToFoundDevices(device) {
+  if (!_.find(global.sharedObject.foundDevices, function(d) {return d.address === device.address})){
         global.sharedObject.foundDevices.push(device);
-        refreshRenderer();
-      }
-      console.log(`FoundDevices: ${JSON.stringify(global.sharedObject.foundDevices)}`);
+  }
+}
 
-  }, function(){
-    console.log("found nothing");
+function searchForDevices() {
+  const bluetoothWorker = cp.fork('bluetoothSearchWorker.js');
+  bluetoothWorker.on("message", (message) => {
+    switch(message.what) {
+      case 'devices':
+        global.sharedObject.foundDevices = message.payload;
+        break;
+      case 'device':
+        addToFoundDevices(message.payload);
+        break;
+      default:
+        console.log(`Received unknown message from btWorker ${JSON.stringify(message)}`);
+        break;
+    }
+    refreshRenderer();
   });
-  btSerial.inquire();
+  bluetoothWorker.send({"action": "search"});
 }
