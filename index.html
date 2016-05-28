@@ -1,29 +1,13 @@
 <html>
   <head>
-    <title>Angular 2 QuickStart JS</title>
+    <title>Bluetooth File Receiver</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="stylesheet" href="styles.css">
 
-    <!-- 1. Load libraries -->
-
-   <!--  <script src="node_modules/zone.js/dist/zone.js"></script>
-    <script src="node_modules/reflect-metadata/Reflect.js"></script>
-
-    <script src="node_modules/rxjs/bundles/Rx.umd.js"></script>
-    <script src="node_modules/@angular/core/core.umd.js"></script>
-    <script src="node_modules/@angular/common/common.umd.js"></script>
-    <script src="node_modules/@angular/compiler/compiler.umd.js"></script>
-    <script src="node_modules/@angular/platform-browser/platform-browser.umd.js"></script>
-    <script src="node_modules/@angular/platform-browser-dynamic/platform-browser-dynamic.umd.js"></script> -->
-
-    <!-- 2. Load our 'modules' -->
-    <!-- <script src='app/app.component.js'></script>
-    <script src='app/main.js'></script> -->
     <script src='app/lib/angular.min.js'></script>
 
   </head>
 
-  <!-- 3. Display the application -->
   <body ng-app="myApp" ng-controller="myCtrl">
     <h1>Bluetooth Devices:</h1>
     <button id="deviceSearchBtn">Find Devices</button>
@@ -32,7 +16,7 @@
     </ul>
   </body>
 
-<script>
-  require('./app/node/renderer.js');
-</script>
+  <script>
+    require('./app/node/renderer.js');
+  </script>
 </html>
