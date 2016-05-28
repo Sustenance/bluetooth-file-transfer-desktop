@@ -17,18 +17,27 @@ app.controller('myCtrl', function($scope) {
                 break;
         }
     });
-    // This file is required by the index.html file and will
-    // be executed in the renderer process for that window.
-    // All of the Node.js APIs are available in this process.
+
+
+    $scope.getDevices = function () {
+        let message = JSON.stringify({
+            "action": "search"
+        });
+        ipcRenderer.send('asynchronous-message', message);
+    }
+
+    $scope.testConnection = function(device) {
+        let message = JSON.stringify({
+            "action": "test",
+            "address": device.address
+        });
+        ipcRenderer.send('asynchronous-message', message);
+    }
+
     function refresh() {
         $scope.foundDevices = remote.getGlobal('sharedObject').foundDevices;
         $scope.$apply();
         console.log(`${JSON.stringify($scope.foundDevices)}`);
     }
 
-    function getDevices() {
-        ipcRenderer.send('asynchronous-message', 'search');
-    }
-
-    document.getElementById("deviceSearchBtn").addEventListener("click", getDevices);
 });

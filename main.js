@@ -59,16 +59,19 @@ app.on('activate', function () {
 })
 
 ipcMain.on('asynchronous-message', (event, arg) => {
-  switch(arg){
+  let received = JSON.parse(arg);
+  switch(received.action){
     case 'search':
       searchForDevices();
+      break;
+    case 'test':
+      testConnection(received.address);
       break;
     default:
       console.log(`Received unknown command from renderer: ${arg}`);
       break;
   }
-  console.log(arg);  // prints "ping"
-  event.sender.send('asynchronous-reply', 'pong');
+  console.log(arg);
 });
 
 function refreshRenderer() {
@@ -82,7 +85,7 @@ function addToFoundDevices(device) {
 }
 
 function searchForDevices() {
-  const bluetoothWorker = cp.fork('bluetoothSearchWorker.js');
+  const bluetoothWorker = cp.fork('bt/bluetoothSearchWorker.js');
   bluetoothWorker.on("message", (message) => {
     switch(message.what) {
       case 'devices':
@@ -98,4 +101,23 @@ function searchForDevices() {
     refreshRenderer();
   });
   bluetoothWorker.send({"action": "search"});
+}
+
+function testConnection(address) {
+  const bluetoothWorker = cp.fork('bt/bluetoothConnectWorker.js');
+  bluetoothWorker.on("message", (message) => {
+    switch(message.what) {
+      case 'response':
+        global.sharedObject.foundDevices = message.payload;
+        break;
+      default:
+        console.log(`Received unknown message from btWorker ${JSON.stringify(message)}`);
+        break;
+    }
+    refreshRenderer();
+  });
+  bluetoothWorker.send({
+    "action": "test",
+    "address": address
+  });
 }
