@@ -5,7 +5,6 @@ const btSerial = new (require('bluetooth-serial-port')).BluetoothSerialPort();
 let foundDevices = [];
 
 function searchForDevices() {
-  let didFind = false;
   btSerial.on('found', function(address, name) {
       console.log(`Found ${name} at ${address}`);
       let device = {

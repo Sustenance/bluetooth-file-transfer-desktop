@@ -10,9 +10,12 @@
 
   <body ng-app="myApp" ng-controller="myCtrl">
     <h1>Bluetooth Devices:</h1>
-    <button id="deviceSearchBtn">Find Devices</button>
+    <button ng-click="getDevices();" id="deviceSearchBtn">Find Devices</button>
     <ul>
-      <li ng-repeat="device in foundDevices">Found {{device.name}} at {{device.address}}</li>
+      <li ng-repeat="device in foundDevices">
+        <span>Found {{device.name}} at {{device.address}}</span>
+        <button ng-click="testConnection(device);">Test</button>
+      </li>
     </ul>
   </body>
 
