@@ -6,20 +6,21 @@ let foundDevices = [];
 
 function searchForDevices() {
   btSerial.on('found', function(address, name) {
-      console.log(`Found ${name} at ${address}`);
+      //console.log(`Found ${name} at ${address}`);
       let device = {
         "name": name,
         "address": address
       };
       if (!_.find(foundDevices, function(d) {return d.address === device.address})){
         foundDevices.push(device);
-        process.send({
+        console.log(JSON.stringify({
         	"what": "device",
         	"payload": device
-        })
+        }));
       }
   }, function(){
-    console.log("found nothing");
+    process.exit(0);
+    //console.log("found nothing");
   });
   btSerial.inquire();
 }

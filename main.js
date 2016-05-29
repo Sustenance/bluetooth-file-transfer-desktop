@@ -85,39 +85,64 @@ function addToFoundDevices(device) {
 }
 
 function searchForDevices() {
-  const bluetoothWorker = cp.fork('bt/bluetoothSearchWorker.js');
-  bluetoothWorker.on("message", (message) => {
-    switch(message.what) {
-      case 'devices':
-        global.sharedObject.foundDevices = message.payload;
-        break;
-      case 'device':
-        addToFoundDevices(message.payload);
-        break;
-      default:
-        console.log(`Received unknown message from btWorker ${JSON.stringify(message)}`);
-        break;
-    }
-    refreshRenderer();
-  });
-  bluetoothWorker.send({"action": "search"});
+  const bluetoothWorker = cp.spawn('node', ['./bt/bluetoothSearchWorker.js']);
+  console.log("spawned");
+    bluetoothWorker.stdout.on('data', (data) => {
+      console.log(`${data.toString()}`);
+      try{
+        data = JSON.parse(data.toString());
+        console.log(data.device);
+        switch(data.what) {
+          case 'devices':
+            global.sharedObject.foundDevices = data.payload;
+            break;
+          case 'device':
+            addToFoundDevices(data.payload);
+            break;
+          default:
+            console.log(`Received unknown message from btWorker ${JSON.stringify(message)}`);
+            break;
+        }
+        refreshRenderer();
+      }catch (error){
+        console.log(error);
+      }
+    });
+  // bluetoothWorker.on("message", (message) => {
+    // switch(message.what) {
+    //   case 'devices':
+    //     global.sharedObject.foundDevices = message.payload;
+    //     break;
+    //   case 'device':
+    //     addToFoundDevices(message.payload);
+    //     break;
+    //   default:
+    //     console.log(`Received unknown message from btWorker ${JSON.stringify(message)}`);
+    //     break;
+    // }
+    // refreshRenderer();
+  // });
+  // bluetoothWorker.send({"action": "search"});
 }
 
 function testConnection(address) {
-  const bluetoothWorker = cp.fork('bt/bluetoothConnectWorker.js');
-  bluetoothWorker.on("message", (message) => {
-    switch(message.what) {
-      case 'response':
-        global.sharedObject.foundDevices = message.payload;
-        break;
-      default:
-        console.log(`Received unknown message from btWorker ${JSON.stringify(message)}`);
-        break;
-    }
-    refreshRenderer();
+  process.env.ADDR = address;
+  const bluetoothWorker = cp.spawn('node', ['./bt/bluetoothConnectWorker.js'] );
+  console.log("spawned...");
+  bluetoothWorker.stdout.on("data", (data) => {
+    console.log(`Hello: ${data.toString()}`);
+    // switch(data.what) {
+    //   case 'response':
+    //     global.sharedObject.foundDevices = message.payload;
+    //     break;
+    //   default:
+    //     console.log(`Received unknown message from btWorker ${JSON.stringify(message)}`);
+    //     break;
+    // }
+    // refreshRenderer();
   });
-  bluetoothWorker.send({
-    "action": "test",
-    "address": address
-  });
+  // bluetoothWorker.send({
+  //   "action": "test",
+  //   "address": address
+  // });
 }
