@@ -19,7 +19,7 @@ function searchForDevices() {
         }));
       }
   }, function(){
-    process.exit(0);
+    //process.exit(0);
     //console.log("found nothing");
   });
   btSerial.inquire();

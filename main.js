@@ -1,6 +1,7 @@
 require('require-rebuild')();
 const cp = require('child_process');
 const _ = require('lodash');
+const clone = require('clone');
 const btSerial = new (require('bluetooth-serial-port')).BluetoothSerialPort();
 
 const electron = require('electron');
@@ -9,6 +10,8 @@ const {ipcMain} = require('electron');
 const app = electron.app;
 // Module to create native browser window.
 const BrowserWindow = electron.BrowserWindow;
+
+const NOT_IT = 'Not it';
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -94,8 +97,7 @@ function searchForDevices() {
         console.log(data.device);
         switch(data.what) {
           case 'devices':
-            global.sharedObject.foundDevices = data.payload;
-            break;
+            global.sharedObject.foundDevices = _.get(data, 'payload', []);
           case 'device':
             addToFoundDevices(data.payload);
             break;
@@ -126,11 +128,39 @@ function searchForDevices() {
 }
 
 function testConnection(address) {
-  process.env.ADDR = address;
-  const bluetoothWorker = cp.spawn('node', ['./bt/bluetoothConnectWorker.js'] );
-  console.log("spawned...");
-  bluetoothWorker.stdout.on("data", (data) => {
-    console.log(`Hello: ${data.toString()}`);
+  let foundChannel = false;
+  let chan = 1;
+  
+  function newConnection() {
+    if(!foundChannel && chan <= 31){
+      let newEnv = clone(process.env);
+      newEnv.ADDR = address;
+      newEnv.CHAN = chan;
+
+      const bluetoothWorker = cp.spawn('node', ['./bt/bluetoothConnectWorker.js'], {
+        env: newEnv
+      } );
+      console.log(`Spawned for channel ${chan}`);
+      bluetoothWorker.stdout.on("data", (data) => {
+        if(data.toString().includes(NOT_IT)){
+          bluetoothWorker.kill('SIGKILL');
+          console.log("killed on channel" + chan);
+          chan++;
+          newConnection();
+        } else {
+          foundChannel = true;
+          data = data.toString();
+          console.log(data);
+        }
+      });
+    }
+  }
+  newConnection();
+  // process.env.ADDR = address;
+  // const bluetoothWorker = cp.spawn('node', ['./bt/bluetoothConnectWorker.js'] );
+  // console.log("spawned...");
+  // bluetoothWorker.stdout.on("data", (data) => {
+  //   console.log(`Hello: ${data.toString()}`);
     // switch(data.what) {
     //   case 'response':
     //     global.sharedObject.foundDevices = message.payload;
@@ -140,7 +170,7 @@ function testConnection(address) {
     //     break;
     // }
     // refreshRenderer();
-  });
+  //});
   // bluetoothWorker.send({
   //   "action": "test",
   //   "address": address
