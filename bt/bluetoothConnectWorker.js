@@ -9,6 +9,7 @@ const pw = "This is content";
 let address = process.env.ADDR;
 let channel = process.env.CHAN;
 let isFound = false;
+let lastChunk = -1;
 
 let fileName,
 	fileLength,
@@ -39,7 +40,7 @@ if(address && channel) {
 					});
 				} else if (bufJSON){
 					if(bufJSON.name){
-						//console.log(bufString);
+						console.log(bufString);
 						//is the metadata
 						fileName = bufJSON.name;
 						fileLength = bufJSON.length;
@@ -65,7 +66,7 @@ if(address && channel) {
 						let payload = bufJSON.payload ? new Buffer(bufJSON.payload.toString('binary')) : null;
 						let hash = bufJSON.hash;
 
-						if(chunk && chunk <= fileChunks){
+						if(chunk && chunk < fileChunks){
 							if(hash){
 								let md5sum = crypto.createHash('md5').update(payload).digest('hex');
 								//if md5sum !== hash, ask to resend this chunk
@@ -82,7 +83,7 @@ if(address && channel) {
 								"status": "READY"
 							}), "utf-8"), function(err, bytesWritten) {});
 
-							if(chunk === fileChunks) {
+							if(chunk === fileChunks - 1) {
 								//was last chunk
 								writeStream.end();
 							}
@@ -100,9 +101,7 @@ if(address && channel) {
 			if(!isFound){
 				btSerial.close();
 				console.log(NOT_IT);
-			} else {
-				console.log("Am here");
-			}
+			} 
 		}, 5000);
 
 	}, function() {
