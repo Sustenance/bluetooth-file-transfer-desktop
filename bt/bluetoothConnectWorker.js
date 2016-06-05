@@ -1,93 +1,116 @@
 require('require-rebuild')();
 const _ = require('lodash');
 const btSerial = new (require('bluetooth-serial-port')).BluetoothSerialPort();
+const fs = require('fs');
+const crypto = require('crypto');
 const NOT_IT = "Not it";
+const pw = "This is content";
 
-//console.log(process.env.ADDR);
+let address = process.env.ADDR;
+let channel = process.env.CHAN;
+let isFound = false;
 
-// process.on('message', (message) => {
-	let address = process.env.ADDR;
-	let channel = process.env.CHAN;
-	if(address && channel) {
-		btSerial.connect(address, channel, function() {
-			btSerial.on('data', function(buffer) {
-				if(buffer && buffer.toString('utf-8') !== "This is content") {
-					btSerial.close();
-					console.log(NOT_IT);
-				} else {
-					btSerial.write(new Buffer('Latitude: Hi', 'utf-8'), function(err, bytesWritten) {
-		            });
-		            console.log(buffer.toString());
+let fileName,
+	fileLength,
+	fileChunks,
+	fileHash,
+	writeStream;
+if(address && channel) {
+
+	btSerial.connect(address, channel, function() {
+
+		btSerial.on('data', function(buffer) {
+			if(buffer && buffer.toString()){
+				let bufString = buffer.toString('utf-8');
+				let bufJSON = null;
+				try {
+					bufJSON = JSON.parse(bufString);
+				} catch (e) {
+
 				}
-			});
-			setTimeout(function() {
+				if(bufString === pw){
+					console.log("Pw true");
+					isFound = true;
+					btSerial.write(new Buffer(JSON.stringify({
+						"status": "PASS",
+						"pass": pw
+					}), 'utf-8'), function(err, bytesWritten) {
+
+					});
+				} else if (bufJSON){
+					if(bufJSON.name){
+						//console.log(bufString);
+						//is the metadata
+						fileName = bufJSON.name;
+						fileLength = bufJSON.length;
+						fileChunks = bufJSON.chunks;
+						fileHash = bufJSON.hash;
+						writeStream = fs.createWriteStream(`${fileName}`);
+
+						writeStream.on('open', function() {
+							btSerial.write(new Buffer(JSON.stringify({
+								"status": "READY"
+							}), "utf-8"), function(err, bytesWritten) {});
+						});
+
+						writeStream.on('finish', function() {
+							btSerial.close();
+							console.log(`WriteStream for ${fileName} closed`);
+						});
+
+					} else if(bufJSON.payload) {
+						//console.log(bufJSON.payload.toString());
+						//is a chunk of file data
+						let chunk = bufJSON.chunk;
+						let payload = bufJSON.payload ? new Buffer(bufJSON.payload.toString('binary')) : null;
+						let hash = bufJSON.hash;
+
+						if(chunk && chunk <= fileChunks){
+							if(hash){
+								let md5sum = crypto.createHash('md5').update(payload).digest('hex');
+								//if md5sum !== hash, ask to resend this chunk
+								if(md5sum !== hash){
+									btSerial.write(new Buffer(JSON.stringify({
+									"status": "RESEND",
+									"chunk": chunk
+									}), "utf-8"), function(err, bytesWritten) {});
+									return;
+								}
+							}
+							writeStream.write(payload);
+							btSerial.write(new Buffer(JSON.stringify({
+								"status": "READY"
+							}), "utf-8"), function(err, bytesWritten) {});
+
+							if(chunk === fileChunks) {
+								//was last chunk
+								writeStream.end();
+							}
+
+						} else {
+							//somehow have more chunks than we are supposed to
+						}
+					}
+				} //end of bufJSON
+			} 
+
+		}); //end of onData callback
+
+		setTimeout(function() {
+			if(!isFound){
 				btSerial.close();
 				console.log(NOT_IT);
-			}, 5000);
+			} else {
+				console.log("Am here");
+			}
+		}, 5000);
 
-		}, function() {
-			btSerial.close();
-			console.log(NOT_IT);
-		});
-	}
-	btSerial.on('close', function() {
+	}, function() {
+		btSerial.close();
 		console.log(NOT_IT);
-    })
-	// 	btSerial.connect(address, chan, function() {
- //            //console.log('connected');
+	});  //end of onConnect
+}
 
- //            //require('sleep').sleep(5);
- //            btSerial.write(new Buffer('Latitude: Hi', 'utf-8'), function(err, bytesWritten) {
- //                if (err) console.log(err);
- //            });
-
- //            btSerial.on('data', function(buffer) {
- //            	if(!buffer.toString('utf-8')){}
- //                console.log(buffer.toString('utf-8'));
- //                if(buffer.toString() === "Welcome"){
- //                	btSerial.write(new Buffer('Latitude: Hi', 'utf-8'), function(err, bytesWritten) {
- //                		if (err) console.log(err);
- //                		btSerial.close();
- //            		});
- //                }
- //            });
- //        }, function () {
- //            	console.log('cannot connect');
- //        });
-	// }
-	// let doIt = function() {
-	// 	btSerial.findSerialPortChannel(address, chan, function(channel) {
-	// 		console.log(`Found channel ${channel} on ${address}`);
-	//         btSerial.connect(address, channel, function() {
-	//             console.log('connected');
-
-	//             btSerial.write(new Buffer('Latitude: Hi', 'utf-8'), function(err, bytesWritten) {
-	//                 if (err) console.log(err);
-	//             });
-
-	//             btSerial.on('data', function(buffer) {
-	//             	if(buffer.toString('utf-8') !== "This is content"){
-	//             		chan = channel + 1;
-	//             		doIt();
-	//             	}else{
-	//             		console.log(buffer.toString('utf-8'));
-	//             		if(btSerial.isOpen()){
-	// 			        	btSerial.close();
-	// 			        }
-	//             	}
-	//             });
-	//         }, function () {
-	//             console.log('cannot connect');
-	//         });
-
-	//     }, function() {
-	//         console.log('found nothing');
-	//     });
-	// };
-	// doIt();
-	// }else {
-	// 	console.log(`Did not get address`);
-	// 	console.log(`${JSON.stringify(message)}`);
-	// }
-
-	
+btSerial.on('close', function() {
+	console.log(NOT_IT);
+});
