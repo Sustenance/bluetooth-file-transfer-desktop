@@ -4,7 +4,7 @@
   "description": "Desktop Application which receives files from and Android app over a Bluetooth serial connection",
   "main": "main.js",
   "scripts": {
-  	"start": "electron main.js",
+    "start": "electron main.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "lite": "lite-server"
   },
