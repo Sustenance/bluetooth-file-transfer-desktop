@@ -15,7 +15,8 @@ let fileName,
 	fileLength,
 	fileChunks,
 	fileHash,
-	writeStream;
+	writeStream,
+	foundData;
 if(address && channel) {
 
 	btSerial.connect(address, channel, function() {
@@ -23,13 +24,15 @@ if(address && channel) {
 		btSerial.on('data', function(buffer) {
 			if(buffer && buffer.toString()){
 				let bufString = buffer.toString('utf-8');
+				foundData += bufString;
 				let bufJSON = null;
 				try {
-					bufJSON = JSON.parse(bufString);
+					bufJSON = JSON.parse(foundData);
 				} catch (e) {
 
 				}
 				if(bufString === pw){
+					foundData = "";
 					console.log("Pw true");
 					isFound = true;
 					btSerial.write(new Buffer(JSON.stringify({
@@ -40,7 +43,7 @@ if(address && channel) {
 					});
 				} else if (bufJSON){
 					if(bufJSON.name){
-						console.log(bufString);
+						console.log(foundData);
 						//is the metadata
 						fileName = bufJSON.name;
 						fileLength = bufJSON.length;
@@ -49,8 +52,10 @@ if(address && channel) {
 						writeStream = fs.createWriteStream(`${fileName}`);
 
 						writeStream.on('open', function() {
+							foundData = "";
 							btSerial.write(new Buffer(JSON.stringify({
-								"status": "READY"
+								"status": "READY",
+								"lastChunk": "-1"
 							}), "utf-8"), function(err, bytesWritten) {});
 						});
 
@@ -60,10 +65,10 @@ if(address && channel) {
 						});
 
 					} else if(bufJSON.payload) {
-						//console.log(bufJSON.payload.toString());
+						console.log(`Got ${bufJSON.chunk}`);
 						//is a chunk of file data
 						let chunk = bufJSON.chunk;
-						let payload = bufJSON.payload ? new Buffer(bufJSON.payload.toString('binary')) : null;
+						let payload = bufJSON.payload ? new Buffer(bufJSON.payload.toString('hex'), 'hex') : null;
 						let hash = bufJSON.hash;
 
 						if(chunk && chunk < fileChunks){
@@ -71,19 +76,23 @@ if(address && channel) {
 								let md5sum = crypto.createHash('md5').update(payload).digest('hex');
 								//if md5sum !== hash, ask to resend this chunk
 								if(md5sum !== hash){
+									foundData = "";
 									btSerial.write(new Buffer(JSON.stringify({
 									"status": "RESEND",
-									"chunk": chunk
+									"lastChunk": `${chunk}`
 									}), "utf-8"), function(err, bytesWritten) {});
 									return;
 								}
 							}
+							foundData = "";
 							writeStream.write(payload);
 							btSerial.write(new Buffer(JSON.stringify({
-								"status": "READY"
+								"status": "READY",
+								"lastChunk": `${chunk}`
 							}), "utf-8"), function(err, bytesWritten) {});
 
 							if(chunk === fileChunks - 1) {
+								console.log(`wrote all chunks`);
 								//was last chunk
 								writeStream.end();
 							}
@@ -91,8 +100,8 @@ if(address && channel) {
 						} else {
 							//somehow have more chunks than we are supposed to
 						}
-					}
-				} //end of bufJSON
+					} 
+				}  //end of bufJSON
 			} 
 
 		}); //end of onData callback
