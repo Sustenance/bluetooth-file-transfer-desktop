@@ -86,18 +86,20 @@ if(address && channel) {
 							}
 							foundData = "";
 							writeStream.write(payload);
-							btSerial.write(new Buffer(JSON.stringify({
-								"status": "READY",
-								"lastChunk": `${chunk}`
-							}), "utf-8"), function(err, bytesWritten) {});
-
+							console.log(`fileChunks: ${fileChunks}`)
 							if(chunk === fileChunks - 1) {
 								console.log(`wrote all chunks`);
 								//was last chunk
 								writeStream.end();
+							} else {
+								btSerial.write(new Buffer(JSON.stringify({
+									"status": "READY",
+									"lastChunk": `${chunk}`
+								}), "utf-8"), function(err, bytesWritten) {});
 							}
 
 						} else {
+							writeStream.end();
 							//somehow have more chunks than we are supposed to
 						}
 					} 
