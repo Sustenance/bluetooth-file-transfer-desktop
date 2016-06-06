@@ -68,7 +68,7 @@ if(address && channel) {
 						console.log(`Got ${bufJSON.chunk}`);
 						//is a chunk of file data
 						let chunk = bufJSON.chunk;
-						let payload = bufJSON.payload ? new Buffer(bufJSON.payload.toString('hex'), 'hex') : null;
+						let payload = bufJSON.payload ? bufJSON.payload.toString('hex') : null;
 						let hash = bufJSON.hash;
 
 						if(chunk && chunk < fileChunks){
@@ -83,11 +83,13 @@ if(address && channel) {
 									}), "utf-8"), function(err, bytesWritten) {});
 									return;
 								}
+								console.log(`Checksum OK`);
 							}
+							payload = new Buffer(payload, 'hex');
 							foundData = "";
 							writeStream.write(payload);
-							console.log(`fileChunks: ${fileChunks}`)
-							if(chunk === fileChunks - 1) {
+
+							if(chunk === (fileChunks - 1)) {
 								console.log(`wrote all chunks`);
 								//was last chunk
 								writeStream.end();
