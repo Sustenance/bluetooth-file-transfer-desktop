@@ -20,9 +20,9 @@ function searchForDevices() {
       }
   }, function(){
     //process.exit(0);
-    //console.log("found nothing");
+    console.log("found nothing");
   });
   btSerial.inquire();
 }
-
+//console.log(`{"here":"here"}`);
 searchForDevices();
