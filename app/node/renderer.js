@@ -40,4 +40,6 @@ app.controller('myCtrl', function($scope) {
         console.log(`${JSON.stringify($scope.foundDevices)}`);
     }
 
+    $scope.getDevices();
+
 });

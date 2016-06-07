@@ -2,6 +2,7 @@ require('require-rebuild')();
 const cp = require('child_process');
 const _ = require('lodash');
 const clone = require('clone');
+const repeat = require('repeat');
 const btSerial = new (require('bluetooth-serial-port')).BluetoothSerialPort();
 
 const electron = require('electron');
@@ -65,7 +66,7 @@ ipcMain.on('asynchronous-message', (event, arg) => {
   let received = JSON.parse(arg);
   switch(received.action){
     case 'search':
-      searchForDevices();
+      repeat(searchForDevices).every(1, 'minutes').start.now();
       break;
     case 'test':
       testConnection(received.address);
@@ -88,7 +89,9 @@ function addToFoundDevices(device) {
 }
 
 function searchForDevices() {
-  const bluetoothWorker = cp.spawn('node', ['./bt/bluetoothSearchWorker.js']);
+  const bluetoothWorker = cp.spawn('node', ['./bt/bluetoothSearchWorker.js'], {
+        env: process.env
+      } );
   console.log("spawned");
     bluetoothWorker.stdout.on('data', (data) => {
       console.log(`${data.toString()}`);
