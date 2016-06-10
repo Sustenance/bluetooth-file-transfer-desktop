@@ -4,6 +4,7 @@ const _ = require('lodash');
 const clone = require('clone');
 const repeat = require('repeat');
 const btSerial = new (require('bluetooth-serial-port')).BluetoothSerialPort();
+const fixPath = require('fix-path');
 
 const electron = require('electron');
 const {ipcMain} = require('electron');
@@ -13,6 +14,9 @@ const app = electron.app;
 const BrowserWindow = electron.BrowserWindow;
 
 const NOT_IT = 'Not it';
+
+//fixPath();
+//cp.execFileSync(process.env.SHELL, ['-i', '-c', 'launchctl setenv PATH "$PATH"']);
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -89,14 +93,20 @@ function addToFoundDevices(device) {
 }
 
 function searchForDevices() {
-  const bluetoothWorker = cp.spawn('node', ['./bt/bluetoothSearchWorker.js'], {
-        env: process.env
+  let newEnv = clone(process.env);
+  newEnv.PATH = newEnv.PATH + ':/usr/local/Cellar/node/6.2.0/bin';
+  //newEnv.ATOM_SHELL_INTERNAL_RUN_AS_NODE = 0;
+  //console.log(JSON.stringify(process.env, null, 2));
+  const bluetoothWorker = cp.spawn('node', [process.resourcesPath+'/app/bt/bluetoothSearchWorker.js'], {
+        env: newEnv
       } );
   console.log("spawned");
     bluetoothWorker.stdout.on('data', (data) => {
       console.log(`${data.toString()}`);
       try{
         data = JSON.parse(data.toString());
+        // addToFoundDevices({'name': data.toString(), 'address': '234'});
+        // refreshRenderer();
         console.log(data.device);
         switch(data.what) {
           case 'devices':
@@ -113,6 +123,9 @@ function searchForDevices() {
         console.log(error);
       }
     });
+    console.log(process.resourcesPath);
+    // addToFoundDevices({'name': JSON.stringify(newEnv), 'address': '234'});
+    // refreshRenderer();
   // bluetoothWorker.on("message", (message) => {
     // switch(message.what) {
     //   case 'devices':
@@ -139,8 +152,9 @@ function testConnection(address) {
       let newEnv = clone(process.env);
       newEnv.ADDR = address;
       newEnv.CHAN = chan;
+      newEnv.PATH = newEnv.PATH + ':/usr/local/Cellar/node/6.2.0/bin';
 
-      const bluetoothWorker = cp.spawn('node', ['./bt/bluetoothConnectWorker.js'], {
+      const bluetoothWorker = cp.spawn('node', [process.resourcesPath+'/app/bt/bluetoothConnectWorker.js'], {
         env: newEnv
       } );
       console.log(`Spawned for channel ${chan}`);

@@ -10,13 +10,15 @@
   },
   "author": "Sustenance",
   "license": "ISC",
+  "dependencies": {
+  	"bluetooth-serial-port": "^1.2.6",
+    "clone": "^1.0.2",
+    "lodash": "^4.13.1",
+    "repeat": "^0.0.6",
+    "require-rebuild": "^1.2.8"
+  },
   "devDependencies": {
     "electron-prebuilt": "^1.1.2",
-    "bluetooth-serial-port": "^1.2.6",
-    "electron-rebuild": "^1.1.4",
-    "lodash": "^4.13.1",
-    "require-rebuild": "^1.2.8",
-    "clone": "^1.0.2",
-    "repeat": "^0.0.6"
+    "electron-rebuild": "^1.1.4"
   }
 }
