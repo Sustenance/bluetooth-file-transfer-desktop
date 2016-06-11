@@ -4,7 +4,6 @@ const _ = require('lodash');
 const clone = require('clone');
 const repeat = require('repeat');
 const btSerial = new (require('bluetooth-serial-port')).BluetoothSerialPort();
-const fixPath = require('fix-path');
 
 const electron = require('electron');
 const {ipcMain} = require('electron');
@@ -15,8 +14,8 @@ const BrowserWindow = electron.BrowserWindow;
 
 const NOT_IT = 'Not it';
 
-//fixPath();
-//cp.execFileSync(process.env.SHELL, ['-i', '-c', 'launchctl setenv PATH "$PATH"']);
+//this prefix is required to access app resources (such as bt workers) in a packaged app on Max OSX
+const RESOURCE_PREFIX = (process.platform === 'darwin' && !process.env.NODE) ? `${process.resourcesPath}/app/` : `./`;
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -94,10 +93,10 @@ function addToFoundDevices(device) {
 
 function searchForDevices() {
   let newEnv = clone(process.env);
-  newEnv.PATH = newEnv.PATH + ':/usr/local/Cellar/node/6.2.0/bin';
-  //newEnv.ATOM_SHELL_INTERNAL_RUN_AS_NODE = 0;
-  //console.log(JSON.stringify(process.env, null, 2));
-  const bluetoothWorker = cp.spawn('node', [process.resourcesPath+'/app/bt/bluetoothSearchWorker.js'], {
+  newEnv.PATH = (process.platform === 'darwin') ? newEnv.PATH + ':/usr/local/Cellar/node/6.2.0/bin' : newEnv.PATH;
+
+  let workerPath = `${RESOURCE_PREFIX}bt/bluetoothSearchWorker.js`;
+  const bluetoothWorker = cp.spawn('node', [workerPath], {
         env: newEnv
       } );
   console.log("spawned");
@@ -105,8 +104,6 @@ function searchForDevices() {
       console.log(`${data.toString()}`);
       try{
         data = JSON.parse(data.toString());
-        // addToFoundDevices({'name': data.toString(), 'address': '234'});
-        // refreshRenderer();
         console.log(data.device);
         switch(data.what) {
           case 'devices':
@@ -123,24 +120,6 @@ function searchForDevices() {
         console.log(error);
       }
     });
-    console.log(process.resourcesPath);
-    // addToFoundDevices({'name': JSON.stringify(newEnv), 'address': '234'});
-    // refreshRenderer();
-  // bluetoothWorker.on("message", (message) => {
-    // switch(message.what) {
-    //   case 'devices':
-    //     global.sharedObject.foundDevices = message.payload;
-    //     break;
-    //   case 'device':
-    //     addToFoundDevices(message.payload);
-    //     break;
-    //   default:
-    //     console.log(`Received unknown message from btWorker ${JSON.stringify(message)}`);
-    //     break;
-    // }
-    // refreshRenderer();
-  // });
-  // bluetoothWorker.send({"action": "search"});
 }
 
 function testConnection(address) {
@@ -152,9 +131,10 @@ function testConnection(address) {
       let newEnv = clone(process.env);
       newEnv.ADDR = address;
       newEnv.CHAN = chan;
-      newEnv.PATH = newEnv.PATH + ':/usr/local/Cellar/node/6.2.0/bin';
+      newEnv.PATH = (process.platform === 'darwin') ? newEnv.PATH + ':/usr/local/Cellar/node/6.2.0/bin' : newEnv.PATH;
 
-      const bluetoothWorker = cp.spawn('node', [process.resourcesPath+'/app/bt/bluetoothConnectWorker.js'], {
+      let workerPath = `${RESOURCE_PREFIX}bt/bluetoothConnectWorker.js`;
+      const bluetoothWorker = cp.spawn('node', [workerPath], {
         env: newEnv
       } );
       console.log(`Spawned for channel ${chan}`);
@@ -173,23 +153,4 @@ function testConnection(address) {
     }
   }
   newConnection();
-  // process.env.ADDR = address;
-  // const bluetoothWorker = cp.spawn('node', ['./bt/bluetoothConnectWorker.js'] );
-  // console.log("spawned...");
-  // bluetoothWorker.stdout.on("data", (data) => {
-  //   console.log(`Hello: ${data.toString()}`);
-    // switch(data.what) {
-    //   case 'response':
-    //     global.sharedObject.foundDevices = message.payload;
-    //     break;
-    //   default:
-    //     console.log(`Received unknown message from btWorker ${JSON.stringify(message)}`);
-    //     break;
-    // }
-    // refreshRenderer();
-  //});
-  // bluetoothWorker.send({
-  //   "action": "test",
-  //   "address": address
-  // });
 }
