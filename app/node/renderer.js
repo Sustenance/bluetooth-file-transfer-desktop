@@ -5,7 +5,8 @@ const {remote} = require('electron');
 let app = angular.module('myApp', []);
 app.controller('myCtrl', function($scope) {
     $scope.foundDevices = [];
-    $scope.saveDirectory = "~/ReceivedFiles";
+    $scope.saveDirectory = "";
+    $scope.isScanning = true;
 
     ipcRenderer.on('action', (event, message) => {
         console.log(`Message received: ${message}`);
@@ -14,15 +15,16 @@ app.controller('myCtrl', function($scope) {
                 refresh();
                 break;
             default:
-                console.log(`Recieved an unknown action ${message}`);
+                console.log(`Received an unknown action ${message}`);
                 break;
         }
     });
 
 
-    $scope.getDevices = function () {
+    $scope.changeScanning = function () {
         let message = JSON.stringify({
-            "action": "search"
+            "action": "search",
+            "isScanning": $scope.isScanning
         });
         ipcRenderer.send('asynchronous-message', message);
     }
@@ -36,15 +38,29 @@ app.controller('myCtrl', function($scope) {
     }
 
     $scope.changeDirectory = function() {
-        console.log("dir changed to saveDirectory");
+        console.log(`Direct now ${$scope.saveDirectory}`);
+        let message = JSON.stringify({
+            "action": "dirChange",
+            "path": $scope.saveDirectory
+        });
+        ipcRenderer.send('asynchronous-message', message);
+    }
+
+    $scope.ignoreDevice = function(device) {
+        console.log(`Ignoring ${device.name} forever`);
+        let message = JSON.stringify({
+            "action": "ignore",
+            "address": device.address
+        });
+        ipcRenderer.send('asynchronous-message', message);
     }
 
     function refresh() {
         $scope.foundDevices = remote.getGlobal('sharedObject').foundDevices;
+        $scope.saveDirectory = remote.getGlobal('sharedObject').saveDirectory;
         $scope.$apply();
         console.log(`${JSON.stringify($scope.foundDevices)}`);
     }
 
-    $scope.getDevices();
-
+    $scope.changeScanning();
 });

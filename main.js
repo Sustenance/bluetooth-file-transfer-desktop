@@ -3,7 +3,20 @@ const cp = require('child_process');
 const _ = require('lodash');
 const clone = require('clone');
 const repeat = require('repeat');
+const fs = require('fs');
 const btSerial = new (require('bluetooth-serial-port')).BluetoothSerialPort();
+//this prefix is required to access app resources (such as bt workers) in a packaged app on Max OSX
+const RESOURCE_PREFIX = (process.platform === 'darwin' && !process.env.NODE) ? `${process.resourcesPath}/app/` : `./`;
+let DEFAULT_SAVE_PREFIX = '';
+switch (process.platform) {
+  case 'darwin':
+    DEFAULT_SAVE_PREFIX = `/Users/${process.env.USER}`;
+    break;
+  default :
+    break;
+};
+const config = require(`${RESOURCE_PREFIX}config.json`);
+config.ignoredDevices = config.ignoredDevices || [];
 
 const electron = require('electron');
 const {ipcMain} = require('electron');
@@ -13,10 +26,7 @@ const app = electron.app;
 const BrowserWindow = electron.BrowserWindow;
 
 const NOT_IT = 'Not it';
-
-//this prefix is required to access app resources (such as bt workers) in a packaged app on Max OSX
-const RESOURCE_PREFIX = (process.platform === 'darwin' && !process.env.NODE) ? `${process.resourcesPath}/app/` : `./`;
-
+let searchProcess;
 
 
 // Keep a global reference of the window object, if you don't, the window will
@@ -24,7 +34,9 @@ const RESOURCE_PREFIX = (process.platform === 'darwin' && !process.env.NODE) ? `
 let mainWindow;
 global.sharedObject = {
   foundDevices: [],
-  saveDir: '~/ReceivedFiles'
+  ignoredDevices: config.ignoredDevices,
+  saveDirectory: config.saveDir || `${DEFAULT_SAVE_PREFIX}/ReceivedFiles`,
+  isScanning: true
 };
 
 function createWindow () {
@@ -36,6 +48,7 @@ function createWindow () {
 
   // Open the DevTools.
   mainWindow.webContents.openDevTools()
+
 
   // Emitted when the window is closed.
   mainWindow.on('closed', function () {
@@ -53,6 +66,8 @@ app.on('ready', createWindow)
 
 // Quit when all windows are closed.
 app.on('window-all-closed', function () {
+  if(searchProcess)
+    searchProcess.kill('SIGKILL');
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== 'darwin') {
@@ -66,16 +81,24 @@ app.on('activate', function () {
   if (mainWindow === null) {
     createWindow()
   }
+  refreshRenderer();
 })
 
 ipcMain.on('asynchronous-message', (event, arg) => {
   let received = JSON.parse(arg);
   switch(received.action){
     case 'search':
-      repeat(searchForDevices).every(1, 'minutes').start.now();
+      global.sharedObject.isScanning = received.isScanning;
+      repeat(searchForDevices).every(15, 'seconds').start.now();
       break;
     case 'test':
       testConnection(received.address);
+      break;
+    case 'ignore':
+      ignoreDevice(received.address);
+      break;
+    case 'dirChange':
+      changeSaveDirectory(received.path);
       break;
     default:
       console.log(`Received unknown command from renderer: ${arg}`);
@@ -84,45 +107,87 @@ ipcMain.on('asynchronous-message', (event, arg) => {
   console.log(arg);
 });
 
+function ignoreDevice(address) {
+  if(address){
+    global.sharedObject.ignoredDevices.push(address);
+    global.sharedObject.foundDevices = _.remove(global.sharedObject.foundDevices, function(o) {
+      return o.address !== address;
+    } );
+  }
+  refreshRenderer();
+}
+
+function changeSaveDirectory(path) {
+  console.log(`checking if we can write to ${path}`);
+  if(!checkWrite(path)){
+    fs.mkdir(path, (err) => {
+      if(err){
+        console.log("Could not make dir");
+      }else {
+        checkWrite(path);
+      }
+    });
+  }
+  function checkWrite() {
+    fs.access(path, fs.W_OK, (err) => {
+      if(!err){
+        console.log(`Changed save dir to ${path}`);
+        global.sharedObject.saveDirectory = path;
+        config.saveDir = path;
+        return true;
+      }else{
+        console.log(`Cannot write to ${path}`);
+        return false;
+      }
+      refreshRenderer();
+    }); 
+  } 
+}
+
 function refreshRenderer() {
   mainWindow.webContents.send("action", "refresh");
 }
 
 function addToFoundDevices(device) {
-  if (!_.find(global.sharedObject.foundDevices, function(d) {return d.address === device.address})){
-        global.sharedObject.foundDevices.push(device);
+  if (!_.find(global.sharedObject.foundDevices, function(d) { return (d.address === device.address); }) && 
+    !_.includes(global.sharedObject.ignoredDevices, device.address)) {
+    global.sharedObject.foundDevices.push(device);
   }
 }
 
 function searchForDevices() {
-  let newEnv = clone(process.env);
-  newEnv.PATH = (process.platform === 'darwin') ? newEnv.PATH + ':/usr/local/Cellar/node/6.2.0/bin' : newEnv.PATH;
+  if(searchProcess)
+    searchProcess.kill('SIGKILL');
+  if(global.sharedObject.isScanning){
+    let newEnv = clone(process.env);
+    newEnv.PATH = (process.platform === 'darwin') ? newEnv.PATH + ':/usr/local/Cellar/node/6.2.0/bin' : newEnv.PATH;
 
-  let workerPath = `${RESOURCE_PREFIX}bt/bluetoothSearchWorker.js`;
-  const bluetoothWorker = cp.spawn('node', [workerPath], {
-        env: newEnv
-      } );
-  console.log("spawned");
-    bluetoothWorker.stdout.on('data', (data) => {
-      console.log(`${data.toString()}`);
-      try{
-        data = JSON.parse(data.toString());
-        console.log(data.device);
-        switch(data.what) {
-          case 'devices':
-            global.sharedObject.foundDevices = _.get(data, 'payload', []);
-          case 'device':
-            addToFoundDevices(data.payload);
-            break;
-          default:
-            console.log(`Received unknown message from btWorker ${JSON.stringify(message)}`);
-            break;
+    let workerPath = `${RESOURCE_PREFIX}bt/bluetoothSearchWorker.js`;
+    searchProcess = cp.spawn('node', [workerPath], {
+          env: newEnv
+        } );
+    console.log("spawned");
+      searchProcess .stdout.on('data', (data) => {
+        console.log(`${data.toString()}`);
+        try{
+          data = JSON.parse(data.toString());
+          console.log(data.device);
+          switch(data.what) {
+            case 'devices':
+              global.sharedObject.foundDevices = _.get(data, 'payload', []);
+            case 'device':
+              addToFoundDevices(data.payload);
+              break;
+            default:
+              console.log(`Received unknown message from btWorker ${JSON.stringify(message)}`);
+              break;
+          }
+          refreshRenderer();
+        }catch (error){
+          console.log(error);
         }
-        refreshRenderer();
-      }catch (error){
-        console.log(error);
-      }
-    });
+      });
+  }
 }
 
 function testConnection(address) {
@@ -135,6 +200,7 @@ function testConnection(address) {
       newEnv.ADDR = address;
       newEnv.CHAN = chan;
       newEnv.PATH = (process.platform === 'darwin') ? newEnv.PATH + ':/usr/local/Cellar/node/6.2.0/bin' : newEnv.PATH;
+      newEnv.SAVE_DIR = global.sharedObject.saveDirectory;
 
       let workerPath = `${RESOURCE_PREFIX}bt/bluetoothConnectWorker.js`;
       const bluetoothWorker = cp.spawn('node', [workerPath], {

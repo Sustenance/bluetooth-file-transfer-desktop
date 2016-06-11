@@ -2,25 +2,33 @@
   <head>
     <title>Bluetooth File Receiver</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="styles.css">
+    <link href="style/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style/styles.css">
 
     <script src='app/lib/angular.min.js'></script>
-
   </head>
 
   <body ng-app="myApp" ng-controller="myCtrl">
-    <h2>Save Files to:</h2>
-    <input type="file" id="saveDir" class="custom-file-input" ng-model="saveDirectory" ng-change="changeDirectory();" webkitdirectory />
+    <div>
+      <label for="saveDir">Save Files to:</label>
+      <input type="text" id="saveDir" ng-model="saveDirectory" ng-blur="changeDirectory();"/>
+    </div>
     <h2>Bluetooth Devices:</h2>
-    <button ng-click="getDevices();" id="deviceSearchBtn">Find Devices</button>
+    <div>
+      <label for="scanBox">Scan for devices:</label>
+      <input type="checkbox" id="scanBox" ng-model="isScanning" ng-change="changeScanning();"/>
+    </div>
     <ul>
       <li ng-repeat="device in foundDevices">
         <span>Found {{device.name}} at {{device.address}}</span>
-        <button ng-click="testConnection(device);">Test</button>
+        <button ng-click="testConnection(device);">Connect</button>
+        <button ng-click="ignoreDevice(device);">Ignore</button>
       </li>
     </ul>
   </body>
 
+  <script src="jquery.min.js"></script>
+  <script src="bootstrap.min.js"></script>
   <script>
     require('./app/node/renderer.js');
   </script>

@@ -8,6 +8,7 @@ const pw = "This is content";
 
 let address = process.env.ADDR;
 let channel = process.env.CHAN;
+let saveDir = process.env.SAVE_DIR;
 let isFound = false;
 let lastChunk = -1;
 
@@ -49,7 +50,7 @@ if(address && channel) {
 						fileLength = bufJSON.length;
 						fileChunks = bufJSON.chunks;
 						fileHash = bufJSON.hash;
-						writeStream = fs.createWriteStream(`${fileName}`);
+						writeStream = fs.createWriteStream(`${saveDir}/${fileName}`);
 
 						writeStream.on('open', function() {
 							foundData = "";
