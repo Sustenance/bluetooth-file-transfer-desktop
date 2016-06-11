@@ -55,6 +55,14 @@ app.controller('myCtrl', function($scope) {
         ipcRenderer.send('asynchronous-message', message);
     }
 
+    $scope.clearIgnored = function() {
+        console.log(`Clearing Ignored devices`);
+        let message = JSON.stringify({
+            "action": "clearIgnore"
+        });
+        ipcRenderer.send('asynchronous-message', message);
+    }
+
     function refresh() {
         $scope.foundDevices = remote.getGlobal('sharedObject').foundDevices;
         $scope.saveDirectory = remote.getGlobal('sharedObject').saveDirectory;

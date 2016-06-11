@@ -97,6 +97,9 @@ ipcMain.on('asynchronous-message', (event, arg) => {
     case 'ignore':
       ignoreDevice(received.address);
       break;
+    case 'clearIgnore':
+      clearIgnoredDevicesList();
+      break;
     case 'dirChange':
       changeSaveDirectory(received.path);
       break;
@@ -106,6 +109,12 @@ ipcMain.on('asynchronous-message', (event, arg) => {
   }
   console.log(arg);
 });
+
+function clearIgnoredDevicesList() {
+  global.sharedObject.ignoredDevices = [];
+  refreshRenderer();
+  saveConfig();
+}
 
 function ignoreDevice(address) {
   if(address){
