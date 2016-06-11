@@ -130,6 +130,7 @@ function changeSaveDirectory(path) {
       });
     }
     refreshRenderer();
+    saveConfig();
   })
 
   function checkWrite(callback) {
@@ -146,6 +147,20 @@ function changeSaveDirectory(path) {
       }
     }); 
   } 
+}
+
+function saveConfig() {
+  let config = {
+    "saveDir": global.sharedObject.saveDirectory,
+    "ignoredDevices": global.sharedObject.ignoredDevices
+  }
+  fs.writeFile(`${RESOURCE_PREFIX}config.json`, JSON.stringify(config, null, 2), function(err) {
+    if(!err){
+      console.log("config saved");
+    }else{
+      console.log(JSON.stringify(err));
+    }
+  });
 }
 
 function refreshRenderer() {
