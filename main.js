@@ -17,11 +17,14 @@ const NOT_IT = 'Not it';
 //this prefix is required to access app resources (such as bt workers) in a packaged app on Max OSX
 const RESOURCE_PREFIX = (process.platform === 'darwin' && !process.env.NODE) ? `${process.resourcesPath}/app/` : `./`;
 
+
+
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 global.sharedObject = {
-  foundDevices: []
+  foundDevices: [],
+  saveDir: '~/ReceivedFiles'
 };
 
 function createWindow () {
