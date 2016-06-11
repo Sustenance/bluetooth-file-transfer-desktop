@@ -5,6 +5,7 @@ const {remote} = require('electron');
 let app = angular.module('myApp', []);
 app.controller('myCtrl', function($scope) {
     $scope.foundDevices = [];
+    $scope.saveDirectory = "~/ReceivedFiles";
 
     ipcRenderer.on('action', (event, message) => {
         console.log(`Message received: ${message}`);
@@ -32,6 +33,10 @@ app.controller('myCtrl', function($scope) {
             "address": device.address
         });
         ipcRenderer.send('asynchronous-message', message);
+    }
+
+    $scope.changeDirectory = function() {
+        console.log("dir changed to saveDirectory");
     }
 
     function refresh() {

@@ -9,7 +9,9 @@
   </head>
 
   <body ng-app="myApp" ng-controller="myCtrl">
-    <h1>Bluetooth Devices:</h1>
+    <h2>Save Files to:</h2>
+    <input type="file" id="saveDir" class="custom-file-input" ng-model="saveDirectory" ng-change="changeDirectory();" webkitdirectory />
+    <h2>Bluetooth Devices:</h2>
     <button ng-click="getDevices();" id="deviceSearchBtn">Find Devices</button>
     <ul>
       <li ng-repeat="device in foundDevices">
