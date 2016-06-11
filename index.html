@@ -18,6 +18,7 @@
       <label for="scanBox">Scan for devices:</label>
       <input type="checkbox" id="scanBox" ng-model="isScanning" ng-change="changeScanning();"/>
     </div>
+    <button ng-click="clearIgnored();">Clear ignore list</button>
     <ul>
       <li ng-repeat="device in foundDevices">
         <span>Found {{device.name}} at {{device.address}}</span>
