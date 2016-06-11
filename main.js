@@ -119,27 +119,31 @@ function ignoreDevice(address) {
 
 function changeSaveDirectory(path) {
   console.log(`checking if we can write to ${path}`);
-  if(!checkWrite(path)){
-    fs.mkdir(path, (err) => {
-      if(err){
-        console.log("Could not make dir");
-      }else {
-        checkWrite(path);
-      }
-    });
-  }
-  function checkWrite() {
+  checkWrite(function(canWrite) {
+    if(!canWrite){
+      fs.mkdir(path, (err) => {
+        if(err){
+          console.log("Could not make dir");
+        }else {
+          checkWrite(function(){});
+        }
+      });
+    }
+    refreshRenderer();
+  })
+
+  function checkWrite(callback) {
     fs.access(path, fs.W_OK, (err) => {
       if(!err){
         console.log(`Changed save dir to ${path}`);
         global.sharedObject.saveDirectory = path;
         config.saveDir = path;
-        return true;
+        callback(true);
       }else{
         console.log(`Cannot write to ${path}`);
-        return false;
+        console.log(JSON.stringify(err));
+        callback(false);
       }
-      refreshRenderer();
     }); 
   } 
 }
