@@ -47,7 +47,7 @@ function createWindow () {
   mainWindow.loadURL(`file://${__dirname}/index.html`)
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools()
+  //mainWindow.webContents.openDevTools()
 
 
   // Emitted when the window is closed.
@@ -235,17 +235,30 @@ function testConnection(address) {
         env: newEnv
       } );
       console.log(`Spawned for channel ${chan}`);
+
       bluetoothWorker.stdout.on("data", (data) => {
+        let device = _.find(global.sharedObject.foundDevices, {"address":address});
         if(data.toString().includes(NOT_IT)){
+          if(device){
+            device.isConnected = false;
+          }
           bluetoothWorker.kill('SIGKILL');
           console.log("killed on channel" + chan);
           chan++;
           newConnection();
+        } else if(data.toString().includes("FINISHED")){
+          if(device){
+            device.isConnected = false;
+          }
         } else {
+          if(device){
+            device.isConnected = true;
+          }
           foundChannel = true;
           data = data.toString();
           console.log(data);
         }
+        refreshRenderer();
       });
     }
   }
