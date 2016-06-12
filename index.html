@@ -10,8 +10,11 @@
 
   <body ng-app="myApp" ng-controller="myCtrl">
     <div>
-      <label for="saveDir">Save Files to:</label>
-      <input type="text" id="saveDir" ng-model="saveDirectory" ng-blur="changeDirectory();"/>
+      <div class="leftAlign">
+        <label for="saveDir">Save Files to:</label>
+        <input type="text" id="saveDir" ng-model="saveDirectory" ng-blur="changeDirectory();"/>
+      </div>
+      <button class="rightAlign" ng-click="changePassword();">Change password</button> 
     </div>
     <h2>Bluetooth Devices:</h2>
     <div>
@@ -24,6 +27,7 @@
         <span>Found {{device.name}} at {{device.address}}</span>
         <button ng-click="testConnection(device);">Connect</button>
         <button ng-click="ignoreDevice(device);">Ignore</button>
+        <span ng-attr-hidden="{{!device.isConnected}}" class="blinking">Connected</span>
       </li>
     </ul>
   </body>
