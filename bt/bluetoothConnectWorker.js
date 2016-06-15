@@ -4,11 +4,11 @@ const btSerial = new (require('bluetooth-serial-port')).BluetoothSerialPort();
 const fs = require('fs');
 const crypto = require('crypto');
 const NOT_IT = "Not it";
-const pw = "This is content";
 
 let address = process.env.ADDR;
 let channel = process.env.CHAN;
 let saveDir = process.env.SAVE_DIR;
+let pw = process.env.PASS_HASH;
 let isFound = false;
 let lastChunk = -1;
 
@@ -123,7 +123,7 @@ if(address && channel) {
 				btSerial.close();
 				console.log(NOT_IT);
 			} 
-		}, 5000);
+		}, 4000);
 
 	}, function() {
 		btSerial.close();
