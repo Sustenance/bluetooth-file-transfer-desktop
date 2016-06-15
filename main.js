@@ -5,6 +5,7 @@ const clone = require('clone');
 const repeat = require('repeat');
 const fs = require('fs');
 const btSerial = new (require('bluetooth-serial-port')).BluetoothSerialPort();
+const crypto = require('crypto');
 //this prefix is required to access app resources (such as bt workers) in a packaged app on Max OSX
 const RESOURCE_PREFIX = (process.platform === 'darwin' && !process.env.NODE) ? `${process.resourcesPath}/app/` : `./`;
 let DEFAULT_SAVE_PREFIX = '';
@@ -15,8 +16,9 @@ switch (process.platform) {
   default :
     break;
 };
-const config = require(`${RESOURCE_PREFIX}config.json`);
+let config = require(`${RESOURCE_PREFIX}config.json`);
 config.ignoredDevices = config.ignoredDevices || [];
+config.passHash = config.passHash || "This is content";
 
 const electron = require('electron');
 const {ipcMain} = require('electron');
@@ -36,7 +38,8 @@ global.sharedObject = {
   foundDevices: [],
   ignoredDevices: config.ignoredDevices,
   saveDirectory: config.saveDir || `${DEFAULT_SAVE_PREFIX}/ReceivedFiles`,
-  isScanning: true
+  isScanning: true,
+  passHash: config.passHash
 };
 
 function createWindow () {
@@ -103,12 +106,23 @@ ipcMain.on('asynchronous-message', (event, arg) => {
     case 'dirChange':
       changeSaveDirectory(received.path);
       break;
+    case 'password':
+      changePassword(received.rawPassword);
     default:
       console.log(`Received unknown command from renderer: ${arg}`);
       break;
   }
   console.log(arg);
 });
+
+function changePassword(newPassword){
+  let md5sum = crypto.createHash('md5').update(newPassword).digest('hex');
+  global.sharedObject.passHash = md5sum;
+  saveConfig();
+  if(searchProcess){
+    searchProcess.kill('SIGKILL');
+  }
+}
 
 function clearIgnoredDevicesList() {
   global.sharedObject.ignoredDevices = [];
@@ -161,7 +175,8 @@ function changeSaveDirectory(path) {
 function saveConfig() {
   let config = {
     "saveDir": global.sharedObject.saveDirectory,
-    "ignoredDevices": global.sharedObject.ignoredDevices
+    "ignoredDevices": global.sharedObject.ignoredDevices,
+    "passHash": global.sharedObject.passHash
   }
   fs.writeFile(`${RESOURCE_PREFIX}config.json`, JSON.stringify(config, null, 2), function(err) {
     if(!err){
@@ -229,6 +244,7 @@ function testConnection(address) {
       newEnv.CHAN = chan;
       newEnv.PATH = (process.platform === 'darwin') ? newEnv.PATH + ':/usr/local/Cellar/node/6.2.0/bin' : newEnv.PATH;
       newEnv.SAVE_DIR = global.sharedObject.saveDirectory;
+      newEnv.PASS_HASH = global.sharedObject.passHash;
 
       let workerPath = `${RESOURCE_PREFIX}bt/bluetoothConnectWorker.js`;
       const bluetoothWorker = cp.spawn('node', [workerPath], {

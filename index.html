@@ -9,27 +9,32 @@
   </head>
 
   <body ng-app="myApp" ng-controller="myCtrl">
-    <div>
-      <div class="leftAlign">
-        <label for="saveDir">Save Files to:</label>
-        <input type="text" id="saveDir" ng-model="saveDirectory" ng-blur="changeDirectory();"/>
+    <div class="outerDiv">
+      <div class="headerDiv">
+        <div class="leftAlign">
+          <label for="saveDir">Save Files to:</label>
+          <input type="text" id="saveDir" ng-model="saveDirectory" ng-blur="changeDirectory();"/>
+        </div>
+        <input id="passwordText" name="passwordText" type="password" ng-model="passwordText" class="rightAlign">
+        <button class="rightAlign" ng-click="changePassword(passwordText);">Change password</button> 
       </div>
-      <button class="rightAlign" ng-click="changePassword();">Change password</button> 
+      <div class="contentDiv">
+        <h2>Bluetooth Devices:</h2>
+        <div>
+          <label for="scanBox">Scan for devices:</label>
+          <input type="checkbox" id="scanBox" ng-model="isScanning" ng-change="changeScanning();"/>
+        </div>
+        <button ng-click="clearIgnored();">Clear ignore list</button>
+        <ul>
+          <li ng-repeat="device in foundDevices">
+            <span>Found {{device.name}} at {{device.address}}</span>
+            <button ng-click="testConnection(device);">Connect</button>
+            <button ng-click="ignoreDevice(device);">Ignore</button>
+            <span ng-attr-hidden="{{!device.isConnected}}" class="blinking">Connected</span>
+          </li>
+        </ul>
+      </div>
     </div>
-    <h2>Bluetooth Devices:</h2>
-    <div>
-      <label for="scanBox">Scan for devices:</label>
-      <input type="checkbox" id="scanBox" ng-model="isScanning" ng-change="changeScanning();"/>
-    </div>
-    <button ng-click="clearIgnored();">Clear ignore list</button>
-    <ul>
-      <li ng-repeat="device in foundDevices">
-        <span>Found {{device.name}} at {{device.address}}</span>
-        <button ng-click="testConnection(device);">Connect</button>
-        <button ng-click="ignoreDevice(device);">Ignore</button>
-        <span ng-attr-hidden="{{!device.isConnected}}" class="blinking">Connected</span>
-      </li>
-    </ul>
   </body>
 
   <script src="jquery.min.js"></script>

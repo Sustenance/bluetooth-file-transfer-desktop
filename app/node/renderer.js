@@ -7,6 +7,7 @@ app.controller('myCtrl', function($scope) {
     $scope.foundDevices = [];
     $scope.saveDirectory = "";
     $scope.isScanning = true;
+    $scope.passwordText = "This is content";
 
     ipcRenderer.on('action', (event, message) => {
         console.log(`Message received: ${message}`);
@@ -61,6 +62,19 @@ app.controller('myCtrl', function($scope) {
             "action": "clearIgnore"
         });
         ipcRenderer.send('asynchronous-message', message);
+    }
+
+    $scope.changePassword = function(newPassword) {
+        if(newPassword){
+            console.log(`Saving new password`);
+                let message = JSON.stringify({
+                "action": "password",
+                "rawPassword": newPassword
+            });
+            ipcRenderer.send('asynchronous-message', message);
+        }else{
+            alert(`Password not saved`);
+        }
     }
 
     function refresh() {

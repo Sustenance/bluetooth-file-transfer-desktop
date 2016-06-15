@@ -35,3 +35,17 @@
 .rightAlign {
   float: right;
 }
+
+.outerDiv {
+  position: relative;
+}
+
+.headerDiv {
+  position: relative;
+  padding: 10px;
+}
+
+.contentDiv {
+  position: absolute;
+  padding: 10px;  
+}
