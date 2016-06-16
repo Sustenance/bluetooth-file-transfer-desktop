@@ -29,6 +29,8 @@ const BrowserWindow = electron.BrowserWindow;
 
 const NOT_IT = 'Not it';
 let searchProcess;
+let connectedDevices = [];
+let connectingThreads = [];
 
 
 // Keep a global reference of the window object, if you don't, the window will
@@ -71,6 +73,12 @@ app.on('ready', createWindow)
 app.on('window-all-closed', function () {
   if(searchProcess)
     searchProcess.kill('SIGKILL');
+    _.forEach(connectedDevices, (deviceThread)=>{
+      deviceThread.kill('SIGKILL');
+    });
+    _.forEach(connectingThreads, (connectingThread)=> {
+      connectingThread.kill('SIGKILL');
+    });
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== 'darwin') {
@@ -195,6 +203,7 @@ function addToFoundDevices(device) {
   if (!_.find(global.sharedObject.foundDevices, function(d) { return (d.address === device.address); }) && 
     !_.includes(global.sharedObject.ignoredDevices, device.address)) {
     global.sharedObject.foundDevices.push(device);
+    testConnection(device.address);
   }
 }
 
@@ -251,6 +260,7 @@ function testConnection(address) {
         env: newEnv
       } );
       console.log(`Spawned for channel ${chan}`);
+      connectingThreads.push(bluetoothWorker);
 
       bluetoothWorker.stdout.on("data", (data) => {
         let device = _.find(global.sharedObject.foundDevices, {"address":address});
@@ -258,6 +268,8 @@ function testConnection(address) {
           if(device){
             device.isConnected = false;
           }
+          _.pull(connectingThreads, bluetoothWorker);
+          _.pull(connectedDevices, bluetoothWorker);
           bluetoothWorker.kill('SIGKILL');
           console.log("killed on channel" + chan);
           chan++;
@@ -265,10 +277,13 @@ function testConnection(address) {
         } else if(data.toString().includes("FINISHED")){
           if(device){
             device.isConnected = false;
+            _.pull(connectingThreads, bluetoothWorker);
+            _.pull(connectedDevices, bluetoothWorker);
           }
         } else {
           if(device){
             device.isConnected = true;
+            connectedDevices.push(bluetoothWorker);
           }
           foundChannel = true;
           data = data.toString();
