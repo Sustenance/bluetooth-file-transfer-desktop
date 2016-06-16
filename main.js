@@ -279,6 +279,9 @@ function testConnection(address) {
             device.isConnected = false;
             _.pull(connectingThreads, bluetoothWorker);
             _.pull(connectedDevices, bluetoothWorker);
+            _.remove(global.sharedObject.foundDevices, (dev)=> {
+              return dev.address === address;
+            })
           }
         } else {
           if(device){
